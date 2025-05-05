@@ -10,6 +10,7 @@ import {
   Dimensions,
   Easing,
   ActivityIndicator,
+  BackHandler,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -164,6 +165,22 @@ export default function ConnectionErrorScreen() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    const handleBackPress = () => {
+      // Prevent back navigation if there is no internet connection
+      if (!isConnected) {
+        return true; // Block the back button
+      }
+      return false; // Allow the back button
+    };
+
+    // Add the back button listener
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+
+    // Cleanup the listener on unmount
+    return () => backHandler.remove();
+  }, [isConnected]);
 
   // Function to start the auto-check interval
   const startAutoCheckInterval = () => {
