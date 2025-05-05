@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import {
   StyleSheet,
   View,
@@ -9,6 +9,7 @@ import {
   Animated,
   Dimensions,
   Easing,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -96,13 +97,39 @@ const NetworkDisconnectedSvg = () => {
 
 export default function ConnectionErrorScreen() {
   const navigation = useNavigation();
-  const { checkConnection } = useNetwork();
+  const { checkConnection, isConnected } = useNetwork();
+  const [isCheckingAutomatically, setIsCheckingAutomatically] = useState(false);
+  const [autoCheckEnabled] = useState(true);
+  const [lastCheckTime, setLastCheckTime] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // Animation values
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(20)).current;
   const buttonScale = useRef(new Animated.Value(0.95)).current;
+  const checkingIndicatorOpacity = useRef(new Animated.Value(0)).current;
+  
+  // Function to handle successful reconnection
+  const handleReconnection = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
+    // Add a small delay before navigation to ensure context is updated
+    setTimeout(() => {
+      navigation.goBack();
+    }, 300);
+  }, [navigation]);
 
+  // Watch for connection changes from context
+  useEffect(() => {
+    if (isConnected === true) {
+      console.log('Connection restored through context update');
+      handleReconnection();
+    }
+  }, [isConnected, handleReconnection]);
+  
   // Animation for the screen elements when it loads
   useEffect(() => {
     Animated.parallel([
@@ -125,7 +152,84 @@ export default function ConnectionErrorScreen() {
         easing: Easing.elastic(1),
       }),
     ]).start();
+
+    // Start auto-checking for connectivity
+    startAutoCheckInterval();
+
+    // Cleanup interval on unmount
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
   }, []);
+
+  // Function to start the auto-check interval
+  const startAutoCheckInterval = () => {
+    console.log("Starting auto-check interval");
+    
+    if (intervalRef.current) {
+      console.log("Clearing existing interval");
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    // Create a new interval that checks connectivity every 3 seconds
+    intervalRef.current = setInterval(async () => {
+      // Only check if auto-retry is enabled
+      if (!autoCheckEnabled) {
+        // No need to check when disabled - do nothing
+        return;
+      }
+      
+      const currentTime = Date.now();
+      
+      // Prevent too frequent checks (at least 2.5 seconds apart)
+      if (currentTime - lastCheckTime < 2500) {
+        return;
+      }
+      
+      console.log('Auto-checking connection... Time since last check:', (currentTime - lastCheckTime) / 1000, 'seconds');
+      setIsCheckingAutomatically(true);
+      fadeInCheckingIndicator();
+      setLastCheckTime(currentTime);
+      
+      try {
+        const isConnected = await checkConnection();
+        console.log('Connection check result:', isConnected);
+        
+        if (isConnected) {
+          console.log('Connection restored!');
+          handleReconnection();
+        } else {
+          fadeOutCheckingIndicator();
+          setIsCheckingAutomatically(false);
+        }
+      } catch (error) {
+        console.error('Error checking connection:', error);
+        fadeOutCheckingIndicator();
+        setIsCheckingAutomatically(false);
+      }
+    }, 3000);
+  };
+
+  // Fade animations for checking indicator
+  const fadeInCheckingIndicator = () => {
+    Animated.timing(checkingIndicatorOpacity, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true
+    }).start();
+  };
+
+  const fadeOutCheckingIndicator = () => {
+    Animated.timing(checkingIndicatorOpacity, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true
+    }).start();
+  };
 
   // Shadow generator helper
   const generateShadowStyle = (elevation: number) => {
@@ -154,12 +258,23 @@ export default function ConnectionErrorScreen() {
       }),
     ]).start();
     
+    // Set checking flag and update last check time
+    setIsCheckingAutomatically(true);
+    fadeInCheckingIndicator();
+    setLastCheckTime(Date.now());
+    
+    console.log('Manual connection check...');
     // Check connection status
     const isConnected = await checkConnection();
+    console.log('Manual check result:', isConnected);
     
     // If connection restored, go back
     if (isConnected) {
-      navigation.goBack();
+      console.log('Connection restored on manual check!');
+      handleReconnection();
+    } else {
+      fadeOutCheckingIndicator();
+      setIsCheckingAutomatically(false);
     }
   };
 
@@ -205,6 +320,12 @@ export default function ConnectionErrorScreen() {
             <Text style={styles.messageText}>
               Unable to connect to the MagicQueue server. Please check your internet connection and try again.
             </Text>
+          </Animated.View>
+          
+          {/* Auto-checking indicator */}
+          <Animated.View style={[styles.autoCheckingContainer, { opacity: checkingIndicatorOpacity }]}>
+            <ActivityIndicator size="small" color="#006C4C" style={{ marginRight: 8 }} />
+            <Text style={styles.autoCheckingText}>Checking connection...</Text>
           </Animated.View>
           
           {/* Retry Button */}
@@ -372,5 +493,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     fontFamily: 'Poppins-Regular',
+  },
+  autoCheckingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  autoCheckingText: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    color: '#006C4C',
   },
 });
