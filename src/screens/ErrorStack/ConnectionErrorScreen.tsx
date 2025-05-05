@@ -63,10 +63,10 @@ const NetworkDisconnectedSvg = () => {
         strokeDasharray="5,5"
       />
       
-      {/* Connection Break Symbol */}
-      <Circle cx="150" cy="100" r="15" fill="rgba(232, 108, 0, 0.1)" />
+      {/* Connection Break Symbol - Repositioned over the circle */}
+      <Circle cx="100" cy="100" r="15" fill="rgba(232, 108, 0, 0.1)" />
       <Path
-        d="M143,93 L157,107 M157,93 L143,107"
+        d="M92,92 L108,108 M108,92 L92,108"
         stroke="#E86C00"
         strokeWidth="2"
         strokeLinecap="round"
@@ -74,7 +74,7 @@ const NetworkDisconnectedSvg = () => {
       
       {/* Connection Lines (right side) */}
       <Path
-        d="M130,90 L143,90"
+        d="M130,90 L145,90"
         stroke="rgba(0, 108, 76, 0.3)"
         strokeWidth="3"
         strokeLinecap="round"
@@ -82,7 +82,7 @@ const NetworkDisconnectedSvg = () => {
         strokeDasharray="5,5"
       />
       <Path
-        d="M130,110 L143,110"
+        d="M130,110 L145,110"
         stroke="rgba(0, 108, 76, 0.3)"
         strokeWidth="3"
         strokeLinecap="round"
@@ -282,6 +282,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: 40,
+    top: -10,
     position: 'relative',
   },
   connectionIndicator: {
@@ -292,8 +293,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(232, 108, 0, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    top: -25,
-    left: -25,
+    bottom: -65,
+    marginBottom: 20,
   },
   messageContainer: {
     width: width * 0.85,
