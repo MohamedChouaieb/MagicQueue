@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AuthStack from './AuthStack';
 import MainStack from './MainStack';
+import ErrorStack from './ErrorStack';
 import { useUser } from '../contexts/UserContext';
 
 const Stack = createNativeStackNavigator();
@@ -17,6 +18,11 @@ export default function RootNavigator() {
       ) : (
         <Stack.Screen name="Auth" component={AuthStack} />
       )}
+      <Stack.Screen 
+        name="Error" 
+        component={ErrorStack}
+        options={{ presentation: 'modal' }}
+      />
     </Stack.Navigator>
   );
 }
