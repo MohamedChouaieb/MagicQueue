@@ -134,7 +134,7 @@ export default function ServerErrorScreen() {
   }, []);
 
   // Shadow generator helper
-  const generateShadowStyle = (elevation) => {
+  const generateShadowStyle = (elevation: number) => {
     return {
       elevation,
       shadowColor: '#D03050',

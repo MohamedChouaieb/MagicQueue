@@ -11,7 +11,7 @@ import {
   Modal,
   Easing,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -235,6 +235,30 @@ export default function Dashboard() {
     });
   };
 
+  // Handle test connection error
+  const handleTestConnectionError = () => {
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: 'Error',
+        params: {
+          screen: 'ConnectionError'
+        }
+      })
+    );
+  };
+
+  // Handle test server error
+  const handleTestServerError = () => {
+    navigation.dispatch(
+      CommonActions.navigate({
+        name: 'Error',
+        params: {
+          screen: 'ServerError'
+        }
+      })
+    );
+  };
+
   // Shadow generator helper
   const generateShadowStyle = (elevation: number) => {
     return {
@@ -381,6 +405,28 @@ export default function Dashboard() {
             <Text style={styles.actionButtonText}>Transfer</Text>
           </TouchableOpacity>
         </Animated.View>
+      </View>
+      
+      {/* Test Error Buttons */}
+      <View style={styles.testButtonsContainer}>
+        <Text style={styles.testButtonsHeader}>Testing Tools:</Text>
+        <View style={styles.testButtonsRow}>
+          <TouchableOpacity 
+            style={[styles.testButton, styles.testConnectionButton]}
+            onPress={handleTestConnectionError}
+          >
+            <Feather name="wifi-off" size={14} color="#E86C00" style={{ marginRight: 6 }} />
+            <Text style={styles.testButtonText}>Test Connection Error</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.testButton, styles.testServerButton]}
+            onPress={handleTestServerError}
+          >
+            <Feather name="server" size={14} color="#D03050" style={{ marginRight: 6 }} />
+            <Text style={styles.testButtonText}>Test Server Error</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       
       {/* Footer Stats */}
@@ -607,6 +653,45 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'Poppins-Medium',
     color: '#006C4C',
+  },
+  // Test buttons styles
+  testButtonsContainer: {
+    width: width * 0.85,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  testButtonsHeader: {
+    fontSize: 12,
+    color: '#666',
+    fontFamily: 'Poppins-Medium',
+    marginBottom: 8,
+  },
+  testButtonsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    width: width * 0.41,
+  },
+  testConnectionButton: {
+    backgroundColor: 'rgba(232, 108, 0, 0.07)',
+    borderColor: 'rgba(232, 108, 0, 0.2)',
+  },
+  testServerButton: {
+    backgroundColor: 'rgba(208, 48, 80, 0.07)',
+    borderColor: 'rgba(208, 48, 80, 0.2)',
+  },
+  testButtonText: {
+    fontSize: 12,
+    fontFamily: 'Poppins-Medium',
+    color: '#333',
   },
   // Footer styles
   footer: {

@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import Svg, { Path, Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
+import { useNetwork } from '../../contexts/NetworkContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -95,6 +96,7 @@ const NetworkDisconnectedSvg = () => {
 
 export default function ConnectionErrorScreen() {
   const navigation = useNavigation();
+  const { checkConnection } = useNetwork();
   
   // Animation values
   const opacity = useRef(new Animated.Value(0)).current;
@@ -126,7 +128,7 @@ export default function ConnectionErrorScreen() {
   }, []);
 
   // Shadow generator helper
-  const generateShadowStyle = (elevation) => {
+  const generateShadowStyle = (elevation: number) => {
     return {
       elevation,
       shadowColor: '#006C4C',
@@ -137,7 +139,8 @@ export default function ConnectionErrorScreen() {
   };
 
   // Retry connection handler
-  const handleRetry = () => {
+  const handleRetry = async () => {
+    // Animation for button press
     Animated.sequence([
       Animated.timing(buttonScale, {
         toValue: 0.95,
@@ -151,11 +154,13 @@ export default function ConnectionErrorScreen() {
       }),
     ]).start();
     
-    // You would put actual reconnection logic here
-    // For now, just simulate a retry
-    setTimeout(() => {
+    // Check connection status
+    const isConnected = await checkConnection();
+    
+    // If connection restored, go back
+    if (isConnected) {
       navigation.goBack();
-    }, 1500);
+    }
   };
 
   return (
