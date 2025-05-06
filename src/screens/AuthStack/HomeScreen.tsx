@@ -176,27 +176,6 @@ const HomeScreen = () => {
             </TouchableOpacity>
           </Animated.View>
           
-          {/* Error Screen Buttons */}
-          <Animated.View style={[styles.errorButtonsContainer, { opacity: errorButtonsOpacity }]}>
-            <TouchableOpacity
-              style={[styles.errorButton, styles.connectionErrorButton]}
-              onPress={() => navigation.navigate('Error', { screen: 'ConnectionError' })}
-              activeOpacity={0.7}
-            >
-              <Feather name="wifi-off" size={16} color="#E86C00" style={{ marginRight: 8 }} />
-              <Text style={styles.errorButtonText}>Connection Error</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.errorButton, styles.serverErrorButton]}
-              onPress={() => navigation.navigate('Error', { screen: 'ServerError' })}
-              activeOpacity={0.7}
-            >
-              <Feather name="server" size={16} color="#D03050" style={{ marginRight: 8 }} />
-              <Text style={styles.errorButtonText}>Server Error</Text>
-            </TouchableOpacity>
-          </Animated.View>
-          
           {/* Version Number */}
           <Text style={styles.versionText}>v1.0.0</Text>
         </View>

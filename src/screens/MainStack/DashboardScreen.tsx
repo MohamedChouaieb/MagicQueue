@@ -646,28 +646,6 @@ const handleStatusChange = (status: React.SetStateAction<string>) => {
         </Animated.View>
       </View>
       
-      {/* Test Error Buttons */}
-      <View style={styles.testButtonsContainer}>
-        <Text style={styles.testButtonsHeader}>Testing Tools:</Text>
-        <View style={styles.testButtonsRow}>
-          <TouchableOpacity 
-            style={[styles.testButton, styles.testConnectionButton]}
-            onPress={handleTestConnectionError}
-          >
-            <Feather name="wifi-off" size={14} color="#E86C00" style={{ marginRight: 6 }} />
-            <Text style={styles.testButtonText}>Test Connection Error</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.testButton, styles.testServerButton]}
-            onPress={handleTestServerError}
-          >
-            <Feather name="server" size={14} color="#D03050" style={{ marginRight: 6 }} />
-            <Text style={styles.testButtonText}>Test Server Error</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-      
       {/* Footer Stats */}
       <View style={styles.footer}>
         <LinearGradient
