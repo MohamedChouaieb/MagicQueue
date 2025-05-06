@@ -17,11 +17,12 @@ import {
   FontAwesome5 
 } from '@expo/vector-icons';
 import { useUser } from '../../contexts/UserContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 
 const ProfileScreen = () => {
-  const { setUsername } = useUser();
+  const {setUsername,fullName,counterName,departmentName,totalServed,waitingTime,} = useUser();  
   const navigation = useNavigation();
   const [isOnline, setIsOnline] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
@@ -83,8 +84,8 @@ const ProfileScreen = () => {
         <View style={styles.avatarContainer}>
           <Text style={styles.avatarText}>A</Text>
         </View>
-        <Text style={styles.name}>Agent Sarah</Text>
-        <Text style={styles.subInfo}>Window 3</Text>
+        <Text style={styles.name}>{fullName}</Text>
+        <Text style={styles.subInfo}>Window {counterName}</Text>
         
         {/* Online Toggle */}
         <View style={styles.toggleContainer}>
@@ -133,9 +134,9 @@ const ProfileScreen = () => {
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <FontAwesome5 name="user-tag" size={16} color="#4ade80" />
-            <Text style={styles.cardLabel}>Role</Text>
+            <Text style={styles.cardLabel}>Service</Text>
           </View>
-          <Text style={styles.cardValue}>Agent</Text>
+          <Text style={styles.cardValue}>{departmentName}</Text>
         </View>
         
         {/* Tickets Card */}
@@ -144,7 +145,7 @@ const ProfileScreen = () => {
             <MaterialCommunityIcons name="ticket-confirmation" size={18} color="#4ade80" />
             <Text style={styles.cardLabel}>Total Tickets Today</Text>
           </View>
-          <Text style={styles.cardValue}>150</Text>
+          <Text style={styles.cardValue}>{totalServed}</Text>
           <View style={styles.progressBackground}>
             <View style={[styles.progressFill, { width: '75%' }]} />
           </View>
@@ -157,7 +158,7 @@ const ProfileScreen = () => {
             <Ionicons name="time-outline" size={18} color="#4ade80" />
             <Text style={styles.cardLabel}>Average Handling Time</Text>
           </View>
-          <Text style={styles.cardValue}>3 min / ticket</Text>
+          <Text style={styles.cardValue}>{waitingTime} min / ticket</Text>
           <View style={styles.progressBackground}>
             <View style={[styles.progressFill, { width: '60%' }]} />
           </View>
@@ -200,12 +201,25 @@ const ProfileScreen = () => {
               <TouchableOpacity
                 style={styles.confirmButton}
                 onPress={async () => {
-                  await setUsername(null);
-                  setModalVisible(false);
+                  try {
+                    // Clear all stored user data
+                    await AsyncStorage.multiRemove([
+                      '@username',
+                      '@userId',
+                      '@counterId',
+                      '@departmentId',
+                    ]);
+                    await setUsername(null);
+                    setModalVisible(false);
+
+                  } catch (error) {
+                    console.error('Logout failed:', error);
+                  }
                 }}
-              >
-                <Text style={styles.confirmButtonText}>Log Out</Text>
+                >
+              <Text style={styles.confirmButtonText}>Log Out</Text>
               </TouchableOpacity>
+
             </View>
           </View>
         </View>

@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useUser } from '../../contexts/UserContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type RootStackParamList = {
   Home: undefined;
@@ -30,17 +31,67 @@ type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 const { width, height } = Dimensions.get('window');
 
 const LoginScreen = () => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const navigation = useNavigation<LoginScreenNavigationProp>();
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const { setUsername } = useUser();
+  const { setUsername, setUserId, setCounterId, setDepartmentId, setFullName, setCounterName, setDepartmentName, setTotalServed, setWaitingTime } = useUser();
 
 
   const togglePasswordVisibility = () => {
     setPasswordVisible(!passwordVisible);
   };
 
+  const handleLogin = async () => {
+    setError('');
+    setLoading(true);
+  
+    try {
+      const response = await fetch('http://141.95.161.231/magic-queue/public/api/test-login', {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: name, password }),
+      });
+  
+      const data = await response.json();
+  
+      if (response.ok) {
+        console.log('Login success:', data);
+        await setUsername(name);
+        await setUserId(data.user_id);
+        await setCounterId(data.counter_id);
+        await setDepartmentId(data.department_id);
+  
+        // 🕑 Wait then fetch extra data
+        const indexResponse = await fetch('http://141.95.161.231/magic-queue/public/api/index', {
+          headers: { 'Accept': 'application/json' },
+        });
+        const indexData = await indexResponse.json();
+  
+        console.log('Index data:', indexData);
+  
+        await setFullName(indexData.user.name);
+        await setCounterName(indexData.user.counter.name);
+        await setDepartmentName(indexData.user.department.name);
+        await setTotalServed(indexData.totalServed);
+        await setWaitingTime(indexData.tmpAttente);
+  
+        // Navigate or update UI here if needed
+  
+      } else {
+        setError(data.error || 'Login failed');
+      }
+  
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <LinearGradient
@@ -96,14 +147,18 @@ const LoginScreen = () => {
               </View>
               
               <TouchableOpacity 
-                style={styles.loginButton}
-                onPress={async () => {
-                  await setUsername(name)}}
+                style={[styles.loginButton, (name === '' || password === '') && styles.disabledButton]}
+                onPress={handleLogin}
+                disabled={name === '' || password === '' || loading}
               >
-                <Text style={styles.loginButtonText}>Log In</Text>
+                <Text style={styles.loginButtonText}>
+                  {loading ? 'Logging in...' : 'Log In'}
+                </Text>
               </TouchableOpacity>
             </View>
-            
+            {error !== '' && (
+              <Text style={{ color: 'red', marginBottom: 10 }}>{error}</Text>
+            )}
             <View style={styles.versionContainer}>
               <Text style={styles.versionText}>v1.0.0</Text>
             </View>
@@ -216,6 +271,9 @@ const styles = StyleSheet.create({
     color: '#6d7c8c',
     fontSize: 14,
   },
+  disabledButton: {
+    backgroundColor: '#ccc',
+  },  
 });
 
 export default LoginScreen;

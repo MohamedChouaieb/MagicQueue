@@ -10,11 +10,13 @@ import {
   Dimensions,
   Modal,
   Easing,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useUser } from '../../contexts/UserContext';
 
 type RootStackParamList = {
   Profile: undefined;
@@ -24,21 +26,22 @@ type DashboardNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 const { width, height } = Dimensions.get('window');
 export default function Dashboard() {
   // State management
-  const [currentTicket, setCurrentTicket] = useState('A015');
-  const [previousTicket, setPreviousTicket] = useState('A015');
-  const [ticketStatus, setTicketStatus] = useState('Treated'); // Default is 'Treated'
+  const { userId, counterId, departmentId } = useUser();
+  const { fullName, counterName, totalServed, waitingTime, loading } = useUser();
+  const { setTotalServed, setWaitingTime } = useUser();
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentTicket, setCurrentTicket] = useState('');
+  const [previousTicket, setPreviousTicket] = useState('----');
+  const [ticketStatus, setTicketStatus] = useState('Treated');
   const [showStatusModal, setShowStatusModal] = useState(false);
   const navigation = useNavigation<DashboardNavigationProp>();
-  const [todaysStats, setTodaysStats] = useState({
-    totalTickets: 42,
-    avgWaitTime: '8 min'
-  });
-  
-  // Agent information
-  const [agentInfo, setAgentInfo] = useState({
-    windowNumber: 3,
-    name: 'Sarah'
-  });
+  const [currentCallId, setCurrentCallId] = useState<number | null>(null);
+
+  // Cooldown state and animation
+  const [buttonCooldown, setButtonCooldown] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(10);
+  const cooldownAnimation = useRef(new Animated.Value(0)).current;
+  const loadingAnimation = useRef(new Animated.Value(0)).current;
 
   // Animation values
   const buttonScale = useRef(new Animated.Value(1)).current;
@@ -51,6 +54,87 @@ export default function Dashboard() {
   const ticketTreatedAnimation = useRef(new Animated.Value(0)).current;
   const ticketAbsentAnimation = useRef(new Animated.Value(0)).current;
   const refreshButtonRotation = useRef(new Animated.Value(0)).current;
+  const ticketRecalledAnimation = useRef(new Animated.Value(0)).current;
+
+  if (loading) {
+    return <ActivityIndicator size="large" color="#0000ff" />;
+  }
+
+  const refreshTotals = async () => {
+    animateRefreshButton();
+    resetStatusAnimations();
+    animateStatusIndicator(ticketRecalledAnimation, 'Recalled');
+    setTimeout(() => {
+      Animated.timing(ticketRecalledAnimation, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }, 7000);
+    try {
+      //* Step 1: Recall the current call if there's one
+      if (currentCallId !== null) {
+        const recallResponse = await fetch('http://141.95.161.231/magic-queue/public/api/calls/recall', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ call_id: currentCallId }),
+        });
+  
+        if (!recallResponse.ok) {
+          throw new Error('Failed to recall ticket');
+        }
+  
+        const recallData = await recallResponse.json();
+        if (recallData.call && recallData.call.id) {
+          setCurrentCallId(recallData.call.id); //! Store the call ID in state
+        }
+        console.log('Recall response:', recallData);
+      }
+  
+      //* Step 2: Refresh totals from index
+      const response = await fetch('http://141.95.161.231/magic-queue/public/api/index', {
+        headers: { 'Accept': 'application/json' },
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to fetch totals');
+      }
+  
+      const indexData = await response.json();
+      console.log('Index data:', indexData);
+  
+      await setTotalServed(indexData.totalServed);
+      await setWaitingTime(indexData.tmpAttente);
+    } catch (error) {
+      console.error('Failed to refresh totals or recall ticket:', error);
+    }
+  };
+  
+  
+  // Rotate loading animation
+  useEffect(() => {
+    if (isLoading) {
+      Animated.loop(
+        Animated.timing(loadingAnimation, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      ).start();
+    } else {
+      loadingAnimation.setValue(0);
+    }
+  }, [isLoading]);
+
+  // Loading rotation interpolation
+  const loadingRotateInterpolation = loadingAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg']
+  });
 
   // Counter animation for ticket number
   const animateTicketNumberChange = (prevNum: string, newNum: React.SetStateAction<string>) => {
@@ -136,84 +220,162 @@ export default function Dashboard() {
     ]).start();
   };
 
-  // Handle generating new ticket (Next button)
-  const handleNextTicket = () => {
-    // Animate button press
-    Animated.sequence([
-      Animated.timing(buttonScale, {
-        toValue: 0.95,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(buttonScale, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      })
-    ]).start();
+  // Start cooldown timer
+  const startCooldown = () => {
+    setButtonCooldown(true);
+    setCooldownSeconds(10);
+    
+    // Reset and animate the cooldown circle
+    cooldownAnimation.setValue(0);
+    Animated.timing(cooldownAnimation, {
+      toValue: 1,
+      duration: 10000, // 10 seconds
+      easing: Easing.linear,
+      useNativeDriver: false,
+    }).start();
+    
+    // Countdown timer
+    const timer = setInterval(() => {
+      setCooldownSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setButtonCooldown(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
 
-    // Default ticket status as Treated
-    setTicketStatus('Treated');
-    
-    // Reset animations and animate new status
+  // Handle generating new ticket (Next button)
+  const handleNextTicket = async () => {
+    // If button is in cooldown or loading, don't do anything
+    if (buttonCooldown || isLoading) return;
     resetStatusAnimations();
-    
-    // After a short delay, animate treated status
+    animateStatusIndicator(ticketTreatedAnimation, 'Treated');
+    setTicketStatus('Treated');
+    // Set loading state
+    setIsLoading(true);
+  
+    try {
+      const response = await fetch('http://141.95.161.231/magic-queue/public/api/calls/next', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          counter_id: counterId,
+          department_id: departmentId,
+        }),
+      });
+  
+      const data = await response.json();
+  
+      if (response.ok && data.ticket) {
+        animateTicketNumberChange(currentTicket, data.ticket);
+        setCurrentTicket(data.ticket);
+        if (data.call && data.call.id) {
+          setCurrentCallId(data.call.id); // Store the call ID in state
+        }
+      } else {
+        // Fallback if no ticket is available
+        animateTicketNumberChange(currentTicket, '----');
+        setCurrentTicket('----');
+        setCurrentCallId(null); // Reset call ID if no ticket
+      }
+    } catch (error) {
+      console.error('Failed to fetch next ticket:', error);
+      animateTicketNumberChange(currentTicket, 'ERR');
+      setCurrentTicket('ERR');
+      setCurrentCallId(null); // Reset call ID on error
+    } finally {
+      // Stop loading state and start cooldown
+      setIsLoading(false);
+      startCooldown();
+    }
+  
     setTimeout(() => {
       Animated.timing(ticketTreatedAnimation, {
-        toValue: 1,
+        toValue: 0,
         duration: 300,
         useNativeDriver: true,
       }).start();
-    }, 500);
-    
-    // Generate new ticket number
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const randomLetter = letters.charAt(Math.floor(Math.random() * letters.length));
-    const randomNumber = Math.floor(Math.random() * 999).toString().padStart(3, '0');
-    const newTicket = `${randomLetter}${randomNumber}`;
-    
-    // Animate the ticket number change
-    animateTicketNumberChange(currentTicket, newTicket);
-    setCurrentTicket(newTicket);
-    
-    // Update stats
-    setTodaysStats(prev => ({
-      ...prev,
-      totalTickets: prev.totalTickets + 1
-    }));
-  };
+    }, 7000);
+  };  
 
+  // Enhanced animation for status indicators
+const animateStatusIndicator = (animationRef: Animated.Value | Animated.ValueXY, status: any) => {
+  resetStatusAnimations();
+  
+  // Bounce-in animation with subtle pulse effect
+  Animated.sequence([
+    // Quick scale up
+    Animated.spring(animationRef, {
+      toValue: 1.1,
+      friction: 5,
+      tension: 300,
+      useNativeDriver: true,
+    }),
+    // Scale back to normal
+    Animated.spring(animationRef, {
+      toValue: 1,
+      friction: 5,
+      tension: 170,
+      useNativeDriver: true,
+    }),
+  ]).start();
+  
+  // Set a timer to fade out the status after 7 seconds
+  setTimeout(() => {
+    Animated.timing(animationRef, {
+      toValue: 0,
+      duration: 300,
+      easing: Easing.ease,
+      useNativeDriver: true,
+    }).start();
+  }, 7000);
+};
   // Handle status selection from modal
-  const handleStatusChange = (status: React.SetStateAction<string>) => {
-    setTicketStatus(status);
-    animateStatusModal(false);
-    
-    // Reset animations
-    resetStatusAnimations();
-    
-    // Animate selected status
-    setTimeout(() => {
-      if (status === 'Treated') {
-        Animated.timing(ticketTreatedAnimation, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }).start();
-      } else if (status === 'Absent') {
-        Animated.timing(ticketAbsentAnimation, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }).start();
-      }
-    }, 200);
-  };
+ // Handle status selection from modal
+const handleStatusChange = (status: React.SetStateAction<string>) => {
+  setTicketStatus(status);
+  animateStatusModal(false);
+  
+  // Reset animations first
+  resetStatusAnimations();
+  
+  // Animate the selected status immediately after reset
+  if (status === 'Treated') {
+    animateStatusIndicator(ticketTreatedAnimation, 'Treated');
+  } else if (status === 'Absent') {
+    animateStatusIndicator(ticketAbsentAnimation, 'Absent');
+  }
+  
+  // Set timeout to hide the status indicator after 7 seconds
+  setTimeout(() => {
+    if (status === 'Treated') {
+      Animated.timing(ticketTreatedAnimation, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else if (status === 'Absent') {
+      Animated.timing(ticketAbsentAnimation, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, 7000);
+}
 
   // Reset status animations
   const resetStatusAnimations = () => {
     ticketTreatedAnimation.setValue(0);
     ticketAbsentAnimation.setValue(0);
+    ticketRecalledAnimation.setValue(0);
   };
 
   // Animate status modal
@@ -246,6 +408,18 @@ export default function Dashboard() {
     };
   };
 
+  // Calculate cooldown progress for circular animation
+  const cooldownProgress = cooldownAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 100],
+  });
+
+  // Calculate rotation for cooldown animation
+  const cooldownRotation = cooldownAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg']
+  });
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8fffc" />
@@ -253,13 +427,13 @@ export default function Dashboard() {
       {/* Top Bar showing Window number/Agent name */}
       <View style={styles.topBar}>
         <Feather name="monitor" size={16} color="#006C4C" style={{ marginRight: 8 }} />
-        <Text style={styles.topBarText}>Window {agentInfo.windowNumber}</Text>
+        <Text style={styles.topBarText}>Window {counterName}</Text>
         <View style={styles.agentContainer}>
           <View style={styles.agentDot} />
           <TouchableOpacity
-          onPress={() => {navigation.navigate('Profile')}}
+            onPress={() => {navigation.navigate('Profile')}}
           >
-          <Text style={styles.agentName}>{agentInfo.name}</Text>
+            <Text style={styles.agentName}>{fullName}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -271,7 +445,7 @@ export default function Dashboard() {
         <TouchableOpacity 
           style={styles.refreshButton}
           activeOpacity={0.6}
-          onPress={animateRefreshButton}
+          onPress={() => refreshTotals()}
         >
           <Animated.View style={{ transform: [{ rotate: rotateInterpolation }] }}>
             <Feather name="refresh-cw" size={18} color="#006C4C" />
@@ -320,8 +494,23 @@ export default function Dashboard() {
             <Text style={styles.statusIndicatorText}>Treated</Text>
             <Feather name="check-circle" size={14} color="#006C4C" style={{ marginLeft: 5 }} />
           </Animated.View>
+
+          <Animated.View 
+              style={[
+                styles.statusIndicator, 
+                styles.recalledIndicator,
+                { 
+                  opacity: ticketRecalledAnimation,
+                  transform: [{ scale: Animated.add(0.8, Animated.multiply(ticketRecalledAnimation, 0.2)) }]
+                }
+              ]}
+              >
+              <Text style={styles.statusIndicatorText}>Recalled</Text>
+              <Feather name="repeat" size={14} color="#3E7BFA" style={{ marginLeft: 5 }} />
+            </Animated.View>
         </View>
       </Animated.View>
+
 
       {/* Next Ticket Button - Animated */}
       <Animated.View 
@@ -332,7 +521,7 @@ export default function Dashboard() {
         ]}
       >
         <LinearGradient
-          colors={['#00875f', '#006C4C']}
+          colors={isLoading || buttonCooldown ? ['#86b3a5', '#7aa095'] : ['#00875f', '#006C4C']}
           style={styles.nextButtonGradient}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
@@ -341,9 +530,59 @@ export default function Dashboard() {
             style={styles.nextButton}
             onPress={handleNextTicket}
             activeOpacity={0.9}
+            disabled={isLoading || buttonCooldown}
           >
-            <Text style={styles.nextButtonText}>Next Ticket</Text>
-            <Feather name="arrow-right-circle" size={20} color="white" style={{ marginLeft: 8 }} />
+            {isLoading ? (
+              <>
+                <Animated.View style={{ transform: [{ rotate: loadingRotateInterpolation }], marginRight: 8 }}>
+                  <Feather name="loader" size={20} color="white" />
+                </Animated.View>
+                <Text style={styles.nextButtonText}>Loading...</Text>
+              </>
+            ) : buttonCooldown ? (
+              <>
+                <View style={styles.cooldownTimerContainer}>
+                  <Text style={styles.cooldownTimerText}>{cooldownSeconds}</Text>
+                  <View style={styles.cooldownCircle}>
+                    <Animated.View 
+                      style={[
+                        styles.cooldownProgress,
+                        {
+                          width: '100%',
+                          height: '100%',
+                          borderRadius: 15,
+                          borderWidth: 2,
+                          borderColor: 'white',
+                          borderLeftColor: cooldownProgress.interpolate({
+                            inputRange: [0, 25, 50, 75, 100],
+                            outputRange: ['transparent', 'white', 'white', 'white', 'white']
+                          }),
+                          borderBottomColor: cooldownProgress.interpolate({
+                            inputRange: [0, 25, 50, 75, 100],
+                            outputRange: ['transparent', 'transparent', 'white', 'white', 'white']
+                          }),
+                          borderRightColor: cooldownProgress.interpolate({
+                            inputRange: [0, 25, 50, 75, 100],
+                            outputRange: ['transparent', 'transparent', 'transparent', 'white', 'white']
+                          }),
+                          borderTopColor: cooldownProgress.interpolate({
+                            inputRange: [0, 25, 50, 75, 100],
+                            outputRange: ['white', 'white', 'white', 'white', 'white']
+                          }),
+                          transform: [{ rotate: cooldownRotation }]
+                        }
+                      ]}
+                    />
+                  </View>
+                </View>
+                <Text style={styles.nextButtonText}>Next Ticket</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.nextButtonText}>Next Ticket</Text>
+                <Feather name="arrow-right-circle" size={20} color="white" style={{ marginLeft: 8 }} />
+              </>
+            )}
           </TouchableOpacity>
         </LinearGradient>
       </Animated.View>
@@ -392,12 +631,12 @@ export default function Dashboard() {
         <View style={styles.footerContent}>
           <View style={styles.statContainer}>
             <Text style={styles.statLabel}>Today's Tickets</Text>
-            <Text style={styles.statValue}>{todaysStats.totalTickets}</Text>
+            <Text style={styles.statValue}>{totalServed}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statContainer}>
             <Text style={styles.statLabel}>Avg. Wait Time</Text>
-            <Text style={styles.statValue}>{todaysStats.avgWaitTime}</Text>
+            <Text style={styles.statValue}>{waitingTime}</Text>
           </View>
         </View>
       </View>
@@ -544,21 +783,37 @@ const styles = StyleSheet.create({
   statusIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     borderRadius: 20,
     marginHorizontal: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+    marginBottom: 5,
   },
   absentIndicator: {
-    backgroundColor: 'rgba(232, 108, 0, 0.1)',
+    backgroundColor: 'rgba(232, 108, 0, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(232, 108, 0, 0.2)',
   },
   treatedIndicator: {
-    backgroundColor: 'rgba(0, 108, 76, 0.1)',
+    backgroundColor: 'rgba(0, 108, 76, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 108, 76, 0.2)',
+  },
+  recalledIndicator: {
+    backgroundColor: 'rgba(62, 123, 250, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(62, 123, 250, 0.2)',
   },
   statusIndicatorText: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: 'Poppins-Medium',
-    color: '#006C4C',
+    color: '#333',
+    letterSpacing: 0.3,
   },
   // Next button styles
   nextButtonContainer: {
@@ -582,6 +837,33 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 17,
     fontFamily: 'Poppins-Bold',
+  },
+  // Cooldown styles
+  cooldownTimerContainer: {
+    position: 'relative',
+    width: 30,
+    height: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  cooldownTimerText: {
+    color: 'white',
+    fontSize: 12,
+    fontFamily: 'Poppins-Bold',
+    position: 'absolute',
+  },
+  cooldownCircle: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    position: 'absolute',
+    overflow: 'hidden',
+  },
+  cooldownProgress: {
+    position: 'absolute',
   },
   // Action buttons styles
   actionButtonsContainer: {
