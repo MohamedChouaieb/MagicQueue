@@ -11,13 +11,16 @@ import {
   Dimensions,
   Animated,
   Easing,
-  ImageBackground,
 } from 'react-native';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import { Feather } from '@expo/vector-icons';
 
 type RootStackParamList = {
   Home: undefined;
   Login: undefined;
+  Error: {
+    screen: string;
+  };
 };
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -72,6 +75,7 @@ const HomeScreen = () => {
   const logoOpacity = new Animated.Value(0);
   const titleTranslateY = new Animated.Value(20);
   const buttonScale = new Animated.Value(0.95);
+  const errorButtonsOpacity = new Animated.Value(0);
 
   useEffect(() => {
     // Animation sequence
@@ -95,6 +99,11 @@ const HomeScreen = () => {
           useNativeDriver: true,
           easing: Easing.elastic(1),
         }),
+        Animated.timing(errorButtonsOpacity, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
       ]),
     ]).start();
   }, []);
@@ -117,11 +126,7 @@ const HomeScreen = () => {
   };
 
   return (
-    <ImageBackground
-      source={{ uri: 'https://placeholder.com/gradient-background' }}
-      style={styles.container}
-      imageStyle={styles.backgroundImage}
-    >
+    <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
         
@@ -171,11 +176,32 @@ const HomeScreen = () => {
             </TouchableOpacity>
           </Animated.View>
           
+          {/* Error Screen Buttons */}
+          <Animated.View style={[styles.errorButtonsContainer, { opacity: errorButtonsOpacity }]}>
+            <TouchableOpacity
+              style={[styles.errorButton, styles.connectionErrorButton]}
+              onPress={() => navigation.navigate('Error', { screen: 'ConnectionError' })}
+              activeOpacity={0.7}
+            >
+              <Feather name="wifi-off" size={16} color="#E86C00" style={{ marginRight: 8 }} />
+              <Text style={styles.errorButtonText}>Connection Error</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.errorButton, styles.serverErrorButton]}
+              onPress={() => navigation.navigate('Error', { screen: 'ServerError' })}
+              activeOpacity={0.7}
+            >
+              <Feather name="server" size={16} color="#D03050" style={{ marginRight: 8 }} />
+              <Text style={styles.errorButtonText}>Server Error</Text>
+            </TouchableOpacity>
+          </Animated.View>
+          
           {/* Version Number */}
           <Text style={styles.versionText}>v1.0.0</Text>
         </View>
       </SafeAreaView>
-    </ImageBackground>
+    </View>
   );
 };
 
@@ -184,6 +210,7 @@ const { width } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f0f9f4',
   },
   safeArea: {
     flex: 1,
@@ -231,7 +258,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     width: width * 0.75,
-    marginBottom: 60,
+    marginBottom: 30,
     shadowColor: '#4CD787',
     shadowOffset: {
       width: 0,
@@ -254,6 +281,35 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '600',
     letterSpacing: 0.5,
+  },
+  errorButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: width * 0.85,
+    marginBottom: 40,
+  },
+  errorButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    width: width * 0.41,
+  },
+  connectionErrorButton: {
+    backgroundColor: 'rgba(232, 108, 0, 0.07)',
+    borderColor: 'rgba(232, 108, 0, 0.2)',
+  },
+  serverErrorButton: {
+    backgroundColor: 'rgba(208, 48, 80, 0.07)',
+    borderColor: 'rgba(208, 48, 80, 0.2)',
+  },
+  errorButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#333',
   },
   versionText: {
     position: 'absolute',
