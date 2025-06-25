@@ -19,8 +19,6 @@ import Svg, { Path, Circle, Defs, LinearGradient as SvgGradient, Stop } from 're
 import { useNetwork } from '../../contexts/NetworkContext';
 
 const { width, height } = Dimensions.get('window');
-
-// Network Disconnection SVG Illustration
 const NetworkDisconnectedSvg = () => {
   return (
     <Svg width={200} height={200} viewBox="0 0 200 200">
@@ -30,25 +28,17 @@ const NetworkDisconnectedSvg = () => {
           <Stop offset="100%" stopColor="#006C4C" />
         </SvgGradient>
       </Defs>
-      
-      {/* Outer Circle */}
       <Circle cx="100" cy="100" r="90" fill="rgba(0, 108, 76, 0.05)" />
       <Circle cx="100" cy="100" r="70" fill="rgba(0, 108, 76, 0.08)" />
-
-      {/* Server Tower */}
       <Path
         d="M80,60 L120,60 L120,140 L80,140 Z"
         fill="white"
         stroke="url(#disconnectGradient)"
         strokeWidth="2"
       />
-      
-      {/* Server Rack Lines */}
       <Path d="M80,80 L120,80" stroke="url(#disconnectGradient)" strokeWidth="2" />
       <Path d="M80,100 L120,100" stroke="url(#disconnectGradient)" strokeWidth="2" />
       <Path d="M80,120 L120,120" stroke="url(#disconnectGradient)" strokeWidth="2" />
-      
-      {/* Connection Lines */}
       <Path
         d="M50,75 C40,85 40,95 50,105"
         stroke="rgba(0, 108, 76, 0.3)"
@@ -65,8 +55,6 @@ const NetworkDisconnectedSvg = () => {
         fill="transparent"
         strokeDasharray="5,5"
       />
-      
-      {/* Connection Break Symbol - Repositioned over the circle */}
       <Circle cx="100" cy="100" r="15" fill="rgba(232, 108, 0, 0.1)" />
       <Path
         d="M92,92 L108,108 M108,92 L92,108"
@@ -74,8 +62,6 @@ const NetworkDisconnectedSvg = () => {
         strokeWidth="2"
         strokeLinecap="round"
       />
-      
-      {/* Connection Lines (right side) */}
       <Path
         d="M130,90 L145,90"
         stroke="rgba(0, 108, 76, 0.3)"
@@ -103,8 +89,6 @@ export default function ConnectionErrorScreen() {
   const [autoCheckEnabled] = useState(true);
   const [lastCheckTime, setLastCheckTime] = useState(0);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  
-  // Animation values
   const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(20)).current;
   const buttonScale = useRef(new Animated.Value(0.95)).current;
@@ -116,14 +100,10 @@ export default function ConnectionErrorScreen() {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-    
-    // Add a small delay before navigation to ensure context is updated
     setTimeout(() => {
       navigation.goBack();
     }, 300);
   }, [navigation]);
-
-  // Watch for connection changes from context
   useEffect(() => {
     if (isConnected === true) {
       console.log('Connection restored through context update');
@@ -131,7 +111,6 @@ export default function ConnectionErrorScreen() {
     }
   }, [isConnected, handleReconnection]);
   
-  // Animation for the screen elements when it loads
   useEffect(() => {
     Animated.parallel([
       Animated.timing(opacity, {
@@ -156,8 +135,6 @@ export default function ConnectionErrorScreen() {
 
     // Start auto-checking for connectivity
     startAutoCheckInterval();
-
-    // Cleanup interval on unmount
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -174,15 +151,9 @@ export default function ConnectionErrorScreen() {
       }
       return false; // Allow the back button
     };
-
-    // Add the back button listener
     const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
-
-    // Cleanup the listener on unmount
     return () => backHandler.remove();
   }, [isConnected]);
-
-  // Function to start the auto-check interval
   const startAutoCheckInterval = () => {
     console.log("Starting auto-check interval");
     
@@ -191,22 +162,14 @@ export default function ConnectionErrorScreen() {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-
-    // Create a new interval that checks connectivity every 3 seconds
     intervalRef.current = setInterval(async () => {
-      // Only check if auto-retry is enabled
       if (!autoCheckEnabled) {
-        // No need to check when disabled - do nothing
         return;
       }
-      
       const currentTime = Date.now();
-      
-      // Prevent too frequent checks (at least 2.5 seconds apart)
       if (currentTime - lastCheckTime < 2500) {
         return;
       }
-      
       console.log('Auto-checking connection... Time since last check:', (currentTime - lastCheckTime) / 1000, 'seconds');
       setIsCheckingAutomatically(true);
       fadeInCheckingIndicator();
@@ -230,8 +193,6 @@ export default function ConnectionErrorScreen() {
       }
     }, 3000);
   };
-
-  // Fade animations for checking indicator
   const fadeInCheckingIndicator = () => {
     Animated.timing(checkingIndicatorOpacity, {
       toValue: 1,
@@ -247,8 +208,6 @@ export default function ConnectionErrorScreen() {
       useNativeDriver: true
     }).start();
   };
-
-  // Shadow generator helper
   const generateShadowStyle = (elevation: number) => {
     return {
       elevation,
@@ -258,10 +217,7 @@ export default function ConnectionErrorScreen() {
       shadowRadius: elevation * 0.8,
     };
   };
-
-  // Retry connection handler
   const handleRetry = async () => {
-    // Animation for button press
     Animated.sequence([
       Animated.timing(buttonScale, {
         toValue: 0.95,
@@ -274,18 +230,13 @@ export default function ConnectionErrorScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-    
-    // Set checking flag and update last check time
     setIsCheckingAutomatically(true);
     fadeInCheckingIndicator();
     setLastCheckTime(Date.now());
     
     console.log('Manual connection check...');
-    // Check connection status
     const isConnected = await checkConnection();
     console.log('Manual check result:', isConnected);
-    
-    // If connection restored, go back
     if (isConnected) {
       console.log('Connection restored on manual check!');
       handleReconnection();
@@ -298,16 +249,11 @@ export default function ConnectionErrorScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8fffc" translucent={true} />
-      
-      {/* SafeAreaView with proper alignment */}
       <SafeAreaView style={styles.safeArea}>
-        {/* Header with title */}
         <View style={styles.header}>
           <Text style={styles.title}>Connection Lost</Text>
         </View>
-        
         <View style={styles.contentContainer}>
-          {/* Animated SVG Container */}
           <Animated.View 
             style={[
               styles.illustrationContainer, 
@@ -322,8 +268,6 @@ export default function ConnectionErrorScreen() {
               <Feather name="wifi-off" size={24} color="#E86C00" />
             </View>
           </Animated.View>
-          
-          {/* Error Message */}
           <Animated.View 
             style={[
               styles.messageContainer,
@@ -338,14 +282,10 @@ export default function ConnectionErrorScreen() {
               Unable to connect to the MagicQueue server. Please check your internet connection and try again.
             </Text>
           </Animated.View>
-          
-          {/* Auto-checking indicator */}
           <Animated.View style={[styles.autoCheckingContainer, { opacity: checkingIndicatorOpacity }]}>
             <ActivityIndicator size="small" color="#006C4C" style={{ marginRight: 8 }} />
             <Text style={styles.autoCheckingText}>Checking connection...</Text>
           </Animated.View>
-          
-          {/* Retry Button */}
           <Animated.View 
             style={[
               styles.buttonContainer,
@@ -369,14 +309,10 @@ export default function ConnectionErrorScreen() {
               </TouchableOpacity>
             </LinearGradient>
           </Animated.View>
-          
-          {/* Help Button */}
           <TouchableOpacity style={styles.helpButton}>
             <Text style={styles.helpButtonText}>Need Help?</Text>
           </TouchableOpacity>
         </View>
-        
-        {/* Footer */}
         <View style={styles.footer}>
           <LinearGradient
             colors={['rgba(248, 255, 252, 0)', '#f8fffc']}

@@ -37,7 +37,7 @@ export default function Dashboard() {
   const navigation = useNavigation<DashboardNavigationProp>();
   const [currentCallId, setCurrentCallId] = useState<number | null>(null);
 
-  // Cooldown state and animation
+  // Cooldown animation
   const [buttonCooldown, setButtonCooldown] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(10);
   const cooldownAnimation = useRef(new Animated.Value(0)).current;
@@ -89,7 +89,7 @@ export default function Dashboard() {
   
         const recallData = await recallResponse.json();
         if (recallData.call && recallData.call.id) {
-          setCurrentCallId(recallData.call.id); //! Store the call ID in state
+          setCurrentCallId(recallData.call.id); 
         }
         console.log('Recall response:', recallData);
       }
@@ -113,8 +113,6 @@ export default function Dashboard() {
     }
   };
   
-  
-  // Rotate loading animation
   useEffect(() => {
     if (isLoading) {
       Animated.loop(
@@ -130,15 +128,12 @@ export default function Dashboard() {
     }
   }, [isLoading]);
 
-  // Loading rotation interpolation
   const loadingRotateInterpolation = loadingAnimation.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg']
   });
 
-  // Counter animation for ticket number
   const animateTicketNumberChange = (prevNum: string, newNum: React.SetStateAction<string>) => {
-    // Fade out & scale down
     Animated.parallel([
       Animated.timing(ticketNumberOpacity, {
         toValue: 0,
@@ -151,7 +146,6 @@ export default function Dashboard() {
         useNativeDriver: true,
       })
     ]).start(() => {
-      // Change number, then fade in & scale up
       setPreviousTicket(newNum);
       Animated.parallel([
         Animated.timing(ticketNumberOpacity, {
@@ -169,7 +163,6 @@ export default function Dashboard() {
     });
   };
 
-  // Animate refresh button rotation
   const animateRefreshButton = () => {
     refreshButtonRotation.setValue(0);
     Animated.timing(refreshButtonRotation, {
@@ -184,8 +177,6 @@ export default function Dashboard() {
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg']
   });
-
-  // Handle qualifier button press - show status modal
   const handleQualifierPress = () => {
     Animated.sequence([
       Animated.timing(qualifierButtonScale, {
@@ -220,12 +211,9 @@ export default function Dashboard() {
     ]).start();
   };
 
-  // Start cooldown timer
   const startCooldown = () => {
     setButtonCooldown(true);
     setCooldownSeconds(10);
-    
-    // Reset and animate the cooldown circle
     cooldownAnimation.setValue(0);
     Animated.timing(cooldownAnimation, {
       toValue: 1,
@@ -233,8 +221,6 @@ export default function Dashboard() {
       easing: Easing.linear,
       useNativeDriver: false,
     }).start();
-    
-    // Countdown timer
     const timer = setInterval(() => {
       setCooldownSeconds((prev) => {
         if (prev <= 1) {
@@ -247,14 +233,11 @@ export default function Dashboard() {
     }, 1000);
   };
 
-  // Handle generating new ticket (Next button)
   const handleNextTicket = async () => {
-    // If button is in cooldown or loading, don't do anything
     if (buttonCooldown || isLoading) return;
     resetStatusAnimations();
     animateStatusIndicator(ticketTreatedAnimation, 'Treated');
     setTicketStatus('Treated');
-    // Set loading state
     setIsLoading(true);
   
     try {
@@ -277,21 +260,19 @@ export default function Dashboard() {
         animateTicketNumberChange(currentTicket, data.ticket);
         setCurrentTicket(data.ticket);
         if (data.call && data.call.id) {
-          setCurrentCallId(data.call.id); // Store the call ID in state
+          setCurrentCallId(data.call.id);
         }
       } else {
-        // Fallback if no ticket is available
         animateTicketNumberChange(currentTicket, '----');
         setCurrentTicket('----');
-        setCurrentCallId(null); // Reset call ID if no ticket
+        setCurrentCallId(null); 
       }
     } catch (error) {
       console.error('Failed to fetch next ticket:', error);
       animateTicketNumberChange(currentTicket, 'ERR');
       setCurrentTicket('ERR');
-      setCurrentCallId(null); // Reset call ID on error
+      setCurrentCallId(null); 
     } finally {
-      // Stop loading state and start cooldown
       setIsLoading(false);
       startCooldown();
     }
@@ -305,20 +286,15 @@ export default function Dashboard() {
     }, 7000);
   };  
 
-  // Enhanced animation for status indicators
 const animateStatusIndicator = (animationRef: Animated.Value | Animated.ValueXY, status: any) => {
   resetStatusAnimations();
-  
-  // Bounce-in animation with subtle pulse effect
   Animated.sequence([
-    // Quick scale up
     Animated.spring(animationRef, {
       toValue: 1.1,
       friction: 5,
       tension: 300,
       useNativeDriver: true,
     }),
-    // Scale back to normal
     Animated.spring(animationRef, {
       toValue: 1,
       friction: 5,
@@ -326,8 +302,6 @@ const animateStatusIndicator = (animationRef: Animated.Value | Animated.ValueXY,
       useNativeDriver: true,
     }),
   ]).start();
-  
-  // Set a timer to fade out the status after 7 seconds
   setTimeout(() => {
     Animated.timing(animationRef, {
       toValue: 0,
@@ -337,23 +311,15 @@ const animateStatusIndicator = (animationRef: Animated.Value | Animated.ValueXY,
     }).start();
   }, 7000);
 };
-  // Handle status selection from modal
- // Handle status selection from modal
 const handleStatusChange = (status: React.SetStateAction<string>) => {
   setTicketStatus(status);
   animateStatusModal(false);
-  
-  // Reset animations first
   resetStatusAnimations();
-  
-  // Animate the selected status immediately after reset
   if (status === 'Treated') {
     animateStatusIndicator(ticketTreatedAnimation, 'Treated');
   } else if (status === 'Absent') {
     animateStatusIndicator(ticketAbsentAnimation, 'Absent');
   }
-  
-  // Set timeout to hide the status indicator after 7 seconds
   setTimeout(() => {
     if (status === 'Treated') {
       Animated.timing(ticketTreatedAnimation, {
@@ -370,15 +336,11 @@ const handleStatusChange = (status: React.SetStateAction<string>) => {
     }
   }, 7000);
 }
-
-  // Reset status animations
   const resetStatusAnimations = () => {
     ticketTreatedAnimation.setValue(0);
     ticketAbsentAnimation.setValue(0);
     ticketRecalledAnimation.setValue(0);
   };
-
-  // Animate status modal
   const animateStatusModal = (show: boolean) => {
     Animated.parallel([
       Animated.timing(statusModalScale, {
@@ -396,8 +358,6 @@ const handleStatusChange = (status: React.SetStateAction<string>) => {
       if (!show) setShowStatusModal(false);
     });
   };
-
-  // Handle test connection error
   const handleTestConnectionError = () => {
     navigation.dispatch(
       CommonActions.navigate({
@@ -409,7 +369,7 @@ const handleStatusChange = (status: React.SetStateAction<string>) => {
     );
   };
 
-  // Handle test server error
+
   const handleTestServerError = () => {
     navigation.dispatch(
       CommonActions.navigate({
@@ -421,7 +381,6 @@ const handleStatusChange = (status: React.SetStateAction<string>) => {
     );
   };
 
-  // Shadow generator helper
   const generateShadowStyle = (elevation: number) => {
     return {
       elevation,
@@ -431,14 +390,10 @@ const handleStatusChange = (status: React.SetStateAction<string>) => {
       shadowRadius: elevation * 0.8,
     };
   };
-
-  // Calculate cooldown progress for circular animation
   const cooldownProgress = cooldownAnimation.interpolate({
     inputRange: [0, 1],
     outputRange: [0, 100],
   });
-
-  // Calculate rotation for cooldown animation
   const cooldownRotation = cooldownAnimation.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg']
@@ -447,8 +402,6 @@ const handleStatusChange = (status: React.SetStateAction<string>) => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#f8fffc" />
-      
-      {/* Top Bar showing Window number/Agent name */}
       <View style={styles.topBar}>
         <Feather name="monitor" size={16} color="#006C4C" style={{ marginRight: 8 }} />
         <Text style={styles.topBarText}>Window {counterName}</Text>
@@ -461,8 +414,6 @@ const handleStatusChange = (status: React.SetStateAction<string>) => {
           </TouchableOpacity>
         </View>
       </View>
-      
-      {/* Header with refresh icon */}
       <View style={styles.header}>
         <View style={{ width: 40 }} />
         <Text style={styles.smallTitle}>CURRENT TICKET</Text>
@@ -476,8 +427,6 @@ const handleStatusChange = (status: React.SetStateAction<string>) => {
           </Animated.View>
         </TouchableOpacity>
       </View>
-
-      {/* Ticket Number - Animated */}
       <Animated.View 
         style={[
           styles.ticketNumberContainer,
@@ -488,8 +437,6 @@ const handleStatusChange = (status: React.SetStateAction<string>) => {
         ]}
       >
         <Text style={styles.ticketNumber}>{previousTicket}</Text>
-        
-        {/* Status indicators */}
         <View style={styles.statusIndicators}>
           <Animated.View 
             style={[
@@ -534,9 +481,6 @@ const handleStatusChange = (status: React.SetStateAction<string>) => {
             </Animated.View>
         </View>
       </Animated.View>
-
-
-      {/* Next Ticket Button - Animated */}
       <Animated.View 
         style={[
           styles.nextButtonContainer,
@@ -610,8 +554,6 @@ const handleStatusChange = (status: React.SetStateAction<string>) => {
           </TouchableOpacity>
         </LinearGradient>
       </Animated.View>
-
-      {/* Additional Action Buttons */}
       <View style={styles.actionButtonsContainer}>
         <Animated.View 
           style={[
@@ -645,8 +587,6 @@ const handleStatusChange = (status: React.SetStateAction<string>) => {
           </TouchableOpacity>
         </Animated.View>
       </View>
-      
-      {/* Footer Stats */}
       <View style={styles.footer}>
         <LinearGradient
           colors={['rgba(248, 255, 252, 0)', '#f8fffc']}
@@ -664,8 +604,6 @@ const handleStatusChange = (status: React.SetStateAction<string>) => {
           </View>
         </View>
       </View>
-      
-      {/* Status Modal Popup */}
       <Modal
         transparent={true}
         visible={showStatusModal}
@@ -730,7 +668,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
   },
-  // Top bar styles
   topBar: {
     width: '100%',
     flexDirection: 'row',
@@ -763,7 +700,6 @@ const styles = StyleSheet.create({
     color: '#00C281',
     fontFamily: 'Poppins-Medium',
   },
-  // Header styles
   header: {
     width: '100%',
     flexDirection: 'row',
@@ -788,7 +724,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: 'rgba(0, 108, 76, 0.04)',
   },
-  // Ticket number styles
   ticketNumberContainer: {
     alignItems: 'center',
     marginBottom: 50,
@@ -839,7 +774,6 @@ const styles = StyleSheet.create({
     color: '#333',
     letterSpacing: 0.3,
   },
-  // Next button styles
   nextButtonContainer: {
     width: width * 0.85,
     height: 58,
@@ -862,7 +796,6 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontFamily: 'Poppins-Bold',
   },
-  // Cooldown styles
   cooldownTimerContainer: {
     position: 'relative',
     width: 30,
@@ -889,7 +822,6 @@ const styles = StyleSheet.create({
   cooldownProgress: {
     position: 'absolute',
   },
-  // Action buttons styles
   actionButtonsContainer: {
     width: width * 0.85,
     flexDirection: 'row',
@@ -914,7 +846,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Medium',
     color: '#006C4C',
   },
-  // Test buttons styles
   testButtonsContainer: {
     width: width * 0.85,
     marginTop: 20,
@@ -953,7 +884,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Medium',
     color: '#333',
   },
-  // Footer styles
   footer: {
     position: 'absolute',
     bottom: 0,
@@ -991,7 +921,6 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: 'rgba(0, 108, 76, 0.1)',
   },
-  // Modal styles
   modalOverlay: {
     flex: 1,
     justifyContent: 'center',

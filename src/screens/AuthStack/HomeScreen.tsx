@@ -24,8 +24,6 @@ type RootStackParamList = {
 };
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
-
-// Enhanced MagicQueue Logo with gradient
 const MagicQueueLogo = () => {
   return (
     <Svg height={100} width={100} viewBox="0 0 100 100">
@@ -50,8 +48,6 @@ const MagicQueueLogo = () => {
     </Svg>
   );
 };
-
-// Decorative background shapes
 const BackgroundShapes = () => {
   return (
     <>
@@ -70,15 +66,12 @@ const BackgroundShapes = () => {
 
 const HomeScreen = () => {
   const navigation = useNavigation<HomeScreenNavigationProp>();
-  
-  // Animation values
   const logoOpacity = new Animated.Value(0);
   const titleTranslateY = new Animated.Value(20);
   const buttonScale = new Animated.Value(0.95);
   const errorButtonsOpacity = new Animated.Value(0);
 
   useEffect(() => {
-    // Animation sequence
     Animated.sequence([
       Animated.timing(logoOpacity, {
         toValue: 1,
@@ -107,8 +100,6 @@ const HomeScreen = () => {
       ]),
     ]).start();
   }, []);
-
-  // Button press animation
   const onPressIn = () => {
     Animated.timing(buttonScale, {
       toValue: 0.95,
@@ -133,12 +124,9 @@ const HomeScreen = () => {
         <BackgroundShapes />
         
         <View style={styles.content}>
-          {/* Logo with Animation */}
           <Animated.View style={[styles.logoContainer, { opacity: logoOpacity }]}>
             <MagicQueueLogo />
           </Animated.View>
-          
-          {/* App Name with Animation */}
           <Animated.Text
             style={[
               styles.appName,
@@ -147,8 +135,6 @@ const HomeScreen = () => {
           >
             MagicQueue
           </Animated.Text>
-          
-          {/* Agent Portal Text with Animation */}
           <Animated.Text
             style={[
               styles.portalText,
@@ -157,8 +143,6 @@ const HomeScreen = () => {
           >
             Agent portal
           </Animated.Text>
-          
-          {/* Sign In Button with Animation */}
           <Animated.View 
             style={[
               styles.buttonContainer,
@@ -175,8 +159,6 @@ const HomeScreen = () => {
               <Text style={styles.signInText}>Sign In</Text>
             </TouchableOpacity>
           </Animated.View>
-          
-          {/* Version Number */}
           <Text style={styles.versionText}>v1.0.0</Text>
         </View>
       </SafeAreaView>

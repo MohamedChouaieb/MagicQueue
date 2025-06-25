@@ -32,8 +32,6 @@ type RootStackParamList = {
 type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const { width, height } = Dimensions.get('window');
-
-// Enhanced MagicQueue Logo with gradient
 const MagicQueueLogo = () => {
   return (
     <Svg height={80} width={80} viewBox="0 0 100 100">
@@ -58,8 +56,6 @@ const MagicQueueLogo = () => {
     </Svg>
   );
 };
-
-// Decorative background shapes
 const BackgroundShapes = () => {
   return (
     <>
@@ -84,11 +80,8 @@ const LoginScreen = () => {
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const { setUsername, setUserId, setCounterId, setDepartmentId, setFullName, setCounterName, setDepartmentName, setTotalServed, setWaitingTime } = useUser();
-
-  // Animation value for error text opacity
   const errorOpacity = useState(new Animated.Value(0))[0];
 
-  // Handle error animation when error state changes
   useEffect(() => {
     if (error) {
       Animated.timing(errorOpacity, {
@@ -128,23 +121,16 @@ const LoginScreen = () => {
         await setUserId(data.user_id);
         await setCounterId(data.counter_id);
         await setDepartmentId(data.department_id);
-  
-        // 🕑 Wait then fetch extra data
         const indexResponse = await fetch('http://141.95.161.231/magic-queue/public/api/index', {
           headers: { 'Accept': 'application/json' },
         });
         const indexData = await indexResponse.json();
-  
         console.log('Index data:', indexData);
-  
         await setFullName(indexData.user.name);
         await setCounterName(indexData.user.counter.name);
         await setDepartmentName(indexData.user.department.name);
         await setTotalServed(indexData.totalServed);
         await setWaitingTime(indexData.tmpAttente);
-  
-        // Navigate or update UI here if needed
-  
       } else {
         setError(data.error || 'Login failed');
       }
@@ -156,8 +142,6 @@ const LoginScreen = () => {
       setLoading(false);
     }
   };
-  
-  // Generate shadow helper
   const generateShadowStyle = (elevation: number) => {
     return {
       elevation,
@@ -175,8 +159,7 @@ const LoginScreen = () => {
       keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
     >
       <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
-      
-      {/* Background Elements */}
+
       <BackgroundShapes />
       
       <SafeAreaView style={styles.safeArea}>
@@ -197,15 +180,12 @@ const LoginScreen = () => {
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View style={styles.contentWrapper}>
               <View style={styles.content}>
-                {/* Logo */}
                 <View style={styles.logoContainer}>
                   <MagicQueueLogo />
                 </View>
                 
                 <Text style={styles.title}>MagicQueue</Text>
                 <Text style={styles.subtitle}>Agent Portal</Text>
-                
-                {/* Form Container with fixed size */}
                 <View style={[styles.formContainer, generateShadowStyle(8)]}>
                   <View style={styles.formHeader}>
                     <Text style={styles.formHeaderText}>Sign In</Text>
@@ -246,8 +226,6 @@ const LoginScreen = () => {
                       />
                     </TouchableOpacity>
                   </View>
-                  
-                  {/* Fixed height error container */}
                   <Animated.View style={[
                     styles.errorContainer,
                     { opacity: errorOpacity }
