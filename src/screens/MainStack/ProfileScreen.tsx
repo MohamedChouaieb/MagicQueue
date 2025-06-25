@@ -24,43 +24,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const ProfileScreen = () => {
   const {setUsername,fullName,counterName,departmentName,totalServed,waitingTime,} = useUser();  
   const navigation = useNavigation();
-  const [isOnline, setIsOnline] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
-  const [statusVisible, setStatusVisible] = useState(false);
-  
-  // Animation values
-  const toggleAnimation = useState(new Animated.Value(28))[0];
-  const statusOpacity = useState(new Animated.Value(0))[0];
-  
-  // Handle toggle animation
-  useEffect(() => {
-    Animated.timing(toggleAnimation, {
-      toValue: isOnline ? 28 : 0,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
-    
-    if (statusVisible) {
-      Animated.sequence([
-        Animated.timing(statusOpacity, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.delay(1500),
-        Animated.timing(statusOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start(() => setStatusVisible(false));
-    }
-  }, [isOnline, statusVisible]);
-  
-  const toggleOnlineStatus = () => {
-    setIsOnline(!isOnline);
-    setStatusVisible(true);
-  };
   
   return (
     <SafeAreaView style={styles.container}>
@@ -74,9 +38,6 @@ const ProfileScreen = () => {
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Profile</Text>
         </View>
-        <TouchableOpacity>
-          <Feather name="settings" size={24} color="#555" />
-        </TouchableOpacity>
       </View>
       
       {/* Profile Info */}
@@ -86,46 +47,6 @@ const ProfileScreen = () => {
         </View>
         <Text style={styles.name}>{fullName}</Text>
         <Text style={styles.subInfo}>Window {counterName}</Text>
-        
-        {/* Online Toggle */}
-        <View style={styles.toggleContainer}>
-          <Text style={styles.toggleLabel}>Online</Text>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            style={[
-              styles.toggleBackground,
-              { backgroundColor: isOnline ? '#4ade80' : '#d1d5db' }
-            ]}
-            onPress={toggleOnlineStatus}
-          >
-            <Animated.View
-              style={[
-                styles.toggleCircle,
-                {
-                  transform: [
-                    {
-                      translateX: toggleAnimation,
-                    },
-                  ],
-                },
-              ]}
-            />
-          </TouchableOpacity>
-        </View>
-        
-        {/* Status Message */}
-        {statusVisible && (
-          <Animated.View 
-            style={[
-              styles.statusMessage,
-              { opacity: statusOpacity }
-            ]}
-          >
-            <Text style={styles.statusText}>
-              {isOnline ? 'You are now online' : 'You are now offline'}
-            </Text>
-          </Animated.View>
-        )}
       </View>
       
       {/* Stats Cards */}
@@ -285,45 +206,7 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 2,
   },
-  toggleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  toggleLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#444',
-    marginRight: 12,
-  },
-  toggleBackground: {
-    width: 56,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-  },
-  toggleCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'white',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  statusMessage: {
-    marginTop: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    borderRadius: 16,
-  },
-  statusText: {
-    color: 'white',
-    fontSize: 14,
-  },
+
   statsContainer: {
     flex: 1,
     paddingHorizontal: 16,
